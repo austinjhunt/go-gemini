@@ -1,7 +1,7 @@
 package public 
 
 import (
-	"gogemini/util"
+	"github.com/austinjhunt/go-gemini/util"
 )
 
 // invoke Gemini exchange REST API public endpoints; one function per endpoint
