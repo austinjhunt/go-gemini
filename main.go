@@ -2,8 +2,8 @@ package main
 
 import (  
 	"fmt"
-	"gogemini/public" 
-	"gogemini/private" 
+	"github.com/austinjhunt/go-gemini/public" 
+	"github.com/austinjhunt/go-gemini/private" 
 )
  
 
