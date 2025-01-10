@@ -20,7 +20,7 @@ func GetSymbols() []string {
 	The response will be an array of strings
 	*/
 	var symbols []string
-	url := "https://api.gemini.com/v1/symbols"
+	url := "/v1/symbols"
 
 	err := util.GetPublicEndpoint(url, &symbols)
 	if err != nil {
@@ -40,7 +40,7 @@ func GetSymbolDetails(symbol string) map[string]interface{} {
 	*/
 
 	var details map[string]interface{}
-	url := "https://api.gemini.com/v1/symbols/details/" + symbol
+	url := "/v1/symbols/details/" + symbol
 
 	err := util.GetPublicEndpoint(url, &details)
 	if err != nil {
@@ -52,7 +52,7 @@ func GetSymbolDetails(symbol string) map[string]interface{} {
 
 func GetNetwork(token string) map[string]interface{} {
 	var network map[string]interface{}
-	url := "https://api.gemini.com/v1/network/" + token
+	url := "/v1/network/" + token
 
 	err := util.GetPublicEndpoint(url, &network)
 	if err != nil {
@@ -64,7 +64,7 @@ func GetNetwork(token string) map[string]interface{} {
 
 func GetTicker(symbol string) map[string]interface{} {
 	var ticker map[string]interface{}
-	url := "https://api.gemini.com/v1/pubticker/" + symbol
+	url := "/v1/pubticker/" + symbol
 
 	err := util.GetPublicEndpoint(url, &ticker)
 	if err != nil {
@@ -135,7 +135,7 @@ func GetFeePromos() map[string]interface{} {
 	 
 	var feePromos map[string]interface{}
 
-	url := "https://api.gemini.com/v1/feepromos"
+	url := "/v1/feepromos"
 	err := util.GetPublicEndpoint(url, &feePromos) 
 	if err != nil {
 		log.Fatalf("Error fetching fee promos %v", err)
@@ -156,7 +156,7 @@ func GetCurrentOrderBook(symbol string) map[string]interface{} {
 	 
 	var currentOrderBook map[string]interface{}
 
-	url := "https://api.gemini.com/v1/book/" + symbol
+	url := "/v1/book/" + symbol
 
 	err := util.GetPublicEndpoint(url, &currentOrderBook)
 
@@ -179,7 +179,7 @@ func GetTradeHistory(symbol string) []map[string]interface{} {
 	*/
 	var tradeHistory []map[string]interface{}
 	 
-	url := "https://api.gemini.com/v1/trades/" + symbol
+	url := "/v1/trades/" + symbol
 	err := util.GetPublicEndpoint(url, &tradeHistory)
 	
 	if err != nil {
@@ -200,7 +200,7 @@ func GetPriceFeed() []map[string]interface{} {
 	*/
 	var priceFeed []map[string]interface{}
 	
-	url := "https://api.gemini.com/v1/pricefeed"
+	url := "/v1/pricefeed"
 	err := util.GetPublicEndpoint(url, &priceFeed)
 	if err != nil {
 		log.Fatalf("Error fetching price feed %v", err)
@@ -219,7 +219,7 @@ func GetFundingAmount(symbol string) map[string]interface{} {
 	The response will be an object
 	*/
 	var fundingAmount map[string]interface{}
-	url := "https://api.gemini.com/v1/fundingamount/" + symbol
+	url := "/v1/fundingamount/" + symbol
 
 	err := util.GetPublicEndpoint(url, &fundingAmount) 
 	if err != nil {
@@ -242,12 +242,12 @@ func DownloadFundingAmountReport(symbol string, fromDate string, toDate string, 
 	*/
 
 	// Construct the URL for the report.
-	url := "https://api.gemini.com/v1/fundingamountreport/records.xlsx?symbol=" + symbol + "&fromDate=" + fromDate + "&toDate=" + toDate + "&numRows=" + strconv.Itoa(numRows)
+	url := "/v1/fundingamountreport/records.xlsx?symbol=" + symbol + "&fromDate=" + fromDate + "&toDate=" + toDate + "&numRows=" + strconv.Itoa(numRows)
 	
 	// Define the file path to save the downloaded file.
 	filePath := "funding_amount_report_" + symbol + "_" + fromDate + "_to_" + toDate + ".xlsx"
 
-	err := util.DownloadFile(url, filePath)
+	err := util.DownloadPublicFile(url, filePath)
 	if err != nil {
 		log.Fatalf("%s", err.Error())
 	}
