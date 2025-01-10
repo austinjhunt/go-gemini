@@ -1,9 +1,10 @@
-package main  
+package main
 
-import (  
+import (
 	"fmt"
-	"github.com/austinjhunt/go-gemini/public" 
-	"github.com/austinjhunt/go-gemini/private" 
+
+	"github.com/austinjhunt/go-gemini/private"
+	"github.com/austinjhunt/go-gemini/public"
 )
  
 
@@ -12,7 +13,7 @@ func main() {
 	symbols := public.GetSymbols()
 
 	// Print the response
-	fmt.Println(string(symbols))
+	fmt.Println(symbols)
 
 	private.Test()
 }
