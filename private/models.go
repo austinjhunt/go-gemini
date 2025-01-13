@@ -43,6 +43,17 @@ type StopLimitOrderRequest struct {
 	Nonce     string `json:"nonce"`
 }
 
+type LimitOrderRequest struct {
+	ClientOrderID string `json:"client_order_id"`
+	Symbol        string `json:"symbol"`
+	Amount        string `json:"amount"`
+	Price         string `json:"price"`
+	Side          string `json:"side"`
+	Type          string `json:"type"`
+	Request       string `json:"request"`
+	Nonce         string `json:"nonce"`
+}
+
 type CancelOrderRequest struct {
 	OrderID int    `json:"order_id"`
 	Request string `json:"request"`
