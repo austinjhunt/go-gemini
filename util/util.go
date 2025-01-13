@@ -6,8 +6,14 @@ import (
 
 	"log"
 	"os"
+	"strconv"
 	"strings"
+	"time"
 )
+
+func GenerateNonceString() string {
+	return strconv.FormatInt(time.Now().UTC().Unix(), 10)
+}
 
 // Function to check if a slice contains a string
 func contains(slice []string, target string) bool {

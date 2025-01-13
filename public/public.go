@@ -3,11 +3,13 @@ package public
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/austinjhunt/go-gemini/util"
 )
@@ -157,6 +159,7 @@ func GetNetwork(token string) map[string]interface{} {
 }
 
 func GetTicker(symbol string) *TickerV1 {
+	util.Info(fmt.Sprintf("GetTicker, symbol: %s", symbol))
 	var ticker TickerV1
 	url := "/v1/pubticker/" + symbol
 
@@ -170,8 +173,9 @@ func GetTicker(symbol string) *TickerV1 {
 }
 
 func GetTickerV2(symbol string) *TickerV2 {
+	util.Info(fmt.Sprintf("GetTickerV2, symbol: %s", symbol))
 	var ticker TickerV2
-	url := "/v2/ticker/" + symbol
+	url := "/v2/ticker/" + strings.ToLower(symbol)
 
 	err := GetPublicEndpoint(url, &ticker)
 	if err != nil {

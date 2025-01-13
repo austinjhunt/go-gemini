@@ -28,21 +28,17 @@ func init() {
 	}
 }
 
-func PostPrivateEndpoint(endpoint string, payload map[string]interface{}, target interface{}) error {
+func PostPrivateEndpoint(payload []byte, target interface{}) error {
 	/*
-		Perform an HTTP POST request on a private Gemini API endpoint and unmarshal the JSON response into the provided target interface.
+				Perform an HTTP POST request on a private Gemini API endpoint and unmarshal the JSON response into the provided target interface.
 
-		Args:
-		endpoint (string) - endpoint path (e.g., /v1/order/new) to make request against. Environment variable API_ENVIRONMENT determines whether to use api.gemini.com (prod) or api.sandbox.gemini.com (sandbox)
-		target - any type of JSON object in which the JSON response gets stored, passed as &target (pointer to a variable in which response is to be stored) when method is invoked
+				Args:
+		        payload - post payload
+		        target - any type of JSON object in which the JSON response gets stored, passed as &target (pointer to a variable in which response is to be stored) when method is invoked
 
-		Returns nothing if successful, returns error if it fails
+				Returns nothing if successful, returns error if it fails
 	*/
-	payloadStr, err := json.Marshal(payload)
-	if err != nil {
-		return errors.New("Error encoding payload to string: " + err.Error())
-	}
-	util.Info("Posting payload to private endpoint " + endpoint + "\n\tPayload: " + string(payloadStr))
+	util.Info(fmt.Sprintf("Posting payload to private endpoint: %s", string(payload)))
 	// Ensure required API keys are set
 	if os.Getenv("GEMINI_EXCHANGE_API_KEY") == "" || len([]byte(os.Getenv("GEMINI_EXCHANGE_API_SECRET"))) == 0 {
 		log.Println("GEMINI_EXCHANGE_API_KEY and GEMINI_EXCHANGE_API_SECRET are not both present in environment")
@@ -54,28 +50,12 @@ func PostPrivateEndpoint(endpoint string, payload map[string]interface{}, target
 	apiKey := util.GetEnvOrDefault("GEMINI_EXCHANGE_API_KEY", "")
 	apiSecret := []byte(util.GetEnvOrDefault("GEMINI_EXCHANGE_API_SECRET", ""))
 
-	// Build the full URL
-	url := util.GetBaseAPIUrl() + endpoint
-
-	// Create the nonce for the payload
-	nonce := time.Now().UTC().Unix()
-
-	// Merge the provided payload with auto-generated values
-	mergedPayload := make(map[string]interface{})
-	for key, value := range payload {
-		mergedPayload[key] = value
-	}
-	mergedPayload["request"] = endpoint
-	mergedPayload["nonce"] = strconv.FormatInt(nonce, 10)
-
-	// Encode the payload to JSON
-	payloadJSON, err := json.Marshal(mergedPayload)
-	if err != nil {
-		return errors.New("Error encoding payload: " + err.Error())
-	}
+	var payloadJSON map[string]interface{}
+	json.Unmarshal(payload, &payloadJSON)
+	url := util.GetBaseAPIUrl() + payloadJSON["request"].(string)
 
 	// Base64 encode the JSON payload
-	b64Payload := base64.StdEncoding.EncodeToString(payloadJSON)
+	b64Payload := base64.StdEncoding.EncodeToString(payload)
 
 	// Create the HMAC signature using SHA384
 	h := hmac.New(sha512.New384, apiSecret)
@@ -134,16 +114,12 @@ func GetClosedOrdersHistory() []Order {
 	*/
 
 	util.Info("GetClosedOrdersHistory")
-
 	var ordersHistory []Order
-	// Create the payload map separately
-	payload := map[string]interface{}{}
-
-	endpoint := "/v1/orders/history"
-
-	// Pass the payload to the function
-	err := PostPrivateEndpoint(endpoint, payload, &ordersHistory)
-
+	payload, _ := json.Marshal(GetClosedOrdersHistoryRequest{
+		Request: "/v1/orders/history",
+		Nonce:   util.GenerateNonceString(),
+	})
+	err := PostPrivateEndpoint(payload, &ordersHistory)
 	if err != nil {
 		log.Fatalf("Error fetching orders history: %v", err)
 		return nil
@@ -151,7 +127,7 @@ func GetClosedOrdersHistory() []Order {
 	return ordersHistory
 }
 
-func GetOrderStatus(order_id string, opts *GetOrderStatusOptions) *Order {
+func GetOrderStatus(order_id int) *Order {
 	/*
 		Get order status
 
@@ -167,79 +143,19 @@ func GetOrderStatus(order_id string, opts *GetOrderStatusOptions) *Order {
 		Response: pointer to an Order object
 	*/
 	util.Info("GetOrderStatus")
-
 	var orderStatus Order
-	endpoint := "/v1/order/status"
-
-	// Create the payload map separately
-	payload := map[string]interface{}{
-		"order_id": order_id,
-	}
-
-	// Pass the payload to the function
-	err := PostPrivateEndpoint(endpoint, payload, &orderStatus)
+	payload, _ := json.Marshal(GetOrderStatusRequest{
+		OrderID: order_id,
+		Request: "/v1/order/status",
+		Nonce:   util.GenerateNonceString(),
+	})
+	err := PostPrivateEndpoint(payload, &orderStatus)
 
 	if err != nil {
 		log.Fatalf("Error fetching order status: %v", err)
 		return nil
 	}
 	return &orderStatus
-}
-
-func NewOrder(symbol string, amount string, price string, side string, orderType string, opts *NewOrderOptions) *Order {
-	/*
-		If you wish orders to be automatically cancelled when your session ends, see the require heartbeat section, or manually send the cancel all session orders message.
-
-		Master API keys do not support cancelation on disconnect via heartbeat.
-
-		Enabled for perpetuals accounts from July 10th, 0100hrs ET onwards.
-
-		A Stop-Limit order is an order type that allows for order placement when a price reaches a specified level. Stop-Limit orders take in both a price and and a stop_price as parameters. The stop_price is the price that triggers the order to be placed on the continous live order book at the price. For buy orders, the stop_price must be below the price while sell orders require the stop_price to be greater than the price.
-
-		What about market orders?
-		The API doesn't directly support market orders because they provide you with no price protection.
-
-		Instead, use the “immediate-or-cancel” order execution option, coupled with an aggressive limit price (i.e. very high for a buy order or very low for a sell order), to achieve the same result.
-
-		Required Args:
-		symbol (string) - symbol for the new order
-		amount (string) - quoted decimal amount to purchase
-		price (string) - quoted decimal amount to spend per unit
-		side (string) - "buy" or "sell"
-		type	(string) -	The order type. "exchange limit" for all order types except for stop-limit orders. "exchange stop limit" for stop-limit orders.
-
-		Optional args:
-		client_order_id (string) - (recommended) - client-specified order id
-		options	(array) -	Optional. An optional array containing at most one supported order execution option. See Order execution options for details.
-		stop_price	(string)	Optional. The price to trigger a stop-limit order. Only available for stop-limit orders.
-		account	(string) -	Optional. Required for Master API keys as described in Private API Invocation. The name of the account within the subaccount group. Specifies the account on which you intend to place the order. Only available for exchange accounts.
-
-		Response : map
-		Response will be the same fields included in Order Status
-	*/
-
-	util.Info(fmt.Sprintf("NewOrder called with symbol: %s, amount: %s, price: %s, side: %s, orderType: %s, opts: %+v", symbol, amount, price, side, orderType, opts))
-
-	var newOrder Order
-	endpoint := "/v1/order/new"
-
-	// Create the payload map separately
-	payload := map[string]interface{}{
-		"symbol": symbol,
-		"amount": amount,
-		"price":  price,
-		"side":   side,
-		"type":   orderType,
-	}
-
-	// Pass the payload to the function
-	err := PostPrivateEndpoint(endpoint, payload, &newOrder)
-
-	if err != nil {
-		log.Fatalf("Error creating new order: %v", err)
-		return nil
-	}
-	return &newOrder
 }
 
 func StopLimitBuy(symbol string, dollarAmount float64, stopPrice float64, limitPrice float64) *Order {
@@ -282,20 +198,27 @@ func StopLimitBuy(symbol string, dollarAmount float64, stopPrice float64, limitP
 	// Calculate the amount to buy
 	amount := dollarAmount / limitPrice
 
-	// Prepare optional parameters
-	opts := &NewOrderOptions{
-		StopPrice: strconv.FormatFloat(stopPrice, 'f', -1, 64),
-	}
+	var newOrder Order
 
-	// Place the stop-limit buy order
-	return NewOrder(
-		symbol,
-		strconv.FormatFloat(amount, 'f', -1, 64),
-		strconv.FormatFloat(limitPrice, 'f', -1, 64),
-		"buy",
-		"exchange stop limit",
-		opts,
-	)
+	payload, _ := json.Marshal(StopLimitOrderRequest{
+		Amount:    strconv.FormatFloat(amount, 'f', 8, 64),
+		Price:     strconv.FormatFloat(limitPrice, 'f', 2, 64),
+		Side:      "buy",
+		StopPrice: strconv.FormatFloat(stopPrice, 'f', 2, 64),
+		Symbol:    symbol,
+		Type:      "exchange stop limit",
+		Request:   "/v1/order/new",
+		Nonce:     util.GenerateNonceString(),
+	})
+
+	// Pass the payload to the function
+	err := PostPrivateEndpoint(payload, &newOrder)
+
+	if err != nil {
+		log.Fatalf("Error creating new order: %v", err)
+		return nil
+	}
+	return &newOrder
 }
 
 func StopLimitSell(symbol string, amount float64, stopPrice float64, limitPrice float64) *Order {
@@ -320,7 +243,7 @@ func StopLimitSell(symbol string, amount float64, stopPrice float64, limitPrice 
 	  - Logs an error and exits if any validation fails or if fetching the current price fails.
 	*/
 
-	util.Info(fmt.Sprintf("StopLimitBuy called with symbol: %s, amount: %f, stopPrice: %f, limitPrice: %f", symbol, amount, stopPrice, limitPrice))
+	util.Info(fmt.Sprintf("StopLimitSell called with symbol: %s, amount: %f, stopPrice: %f, limitPrice: %f", symbol, amount, stopPrice, limitPrice))
 
 	// Fetch the current coin price
 	currentPrice := public.GetCurrentCoinPriceUSD(symbol)
@@ -335,32 +258,82 @@ func StopLimitSell(symbol string, amount float64, stopPrice float64, limitPrice 
 		return nil
 	}
 
-	// Prepare optional parameters
-	opts := &NewOrderOptions{
-		StopPrice: strconv.FormatFloat(stopPrice, 'f', -1, 64),
-	}
+	var newOrder Order
 
-	// Place the stop-limit sell order
-	return NewOrder(
-		symbol,
-		strconv.FormatFloat(amount, 'f', -1, 64),
-		strconv.FormatFloat(limitPrice, 'f', -1, 64),
-		"sell",
-		"exchange stop limit",
-		opts,
-	)
+	payload, _ := json.Marshal(StopLimitOrderRequest{
+		Amount:    strconv.FormatFloat(amount, 'f', 8, 64),
+		Price:     strconv.FormatFloat(limitPrice, 'f', 2, 64),
+		Side:      "sell",
+		StopPrice: strconv.FormatFloat(stopPrice, 'f', 2, 64),
+		Symbol:    symbol,
+		Type:      "exchange stop limit",
+		Request:   "/v1/order/new",
+		Nonce:     util.GenerateNonceString(),
+	})
+
+	// Pass the payload to the function
+	err := PostPrivateEndpoint(payload, &newOrder)
+
+	if err != nil {
+		log.Fatalf("Error creating new order: %v", err)
+		return nil
+	}
+	return &newOrder
+
+}
+
+func GetAvailableBalances() []AvailableBalance {
+	util.Info("GetAvailableBalances called")
+	var availableBalances []AvailableBalance
+	payload, _ := json.Marshal(GetAvailableBalancesRequest{
+		Request: "/v1/balances",
+		Nonce:   util.GenerateNonceString(),
+	})
+	err := PostPrivateEndpoint(payload, &availableBalances)
+	if err != nil {
+		log.Fatalf("Error getting open positions: %v", err)
+		return nil
+	}
+	return availableBalances
+}
+
+func filterBalances(balances []AvailableBalance, predicate func(AvailableBalance) bool) []AvailableBalance {
+	var result []AvailableBalance
+	for _, ab := range balances {
+		if predicate(ab) {
+			result = append(result, ab)
+		}
+	}
+	return result
+}
+
+func GetAvailableCurrencyBalance(currency string) *AvailableBalance {
+	util.Info(fmt.Sprintf("GetAvailableBalances, currency: %s", currency))
+	availableBalances := GetAvailableBalances()
+	util.Info(fmt.Sprintf("My available balances: %v", availableBalances))
+	predicate := func(balance AvailableBalance) bool {
+		return balance.Currency == currency
+	}
+	filteredBalances := filterBalances(availableBalances, predicate)
+	// filtering by symbol will always return only one position (one position per symbol in your portfolio) so return first item
+	if len(filteredBalances) == 0 {
+		return nil
+	}
+	position := filteredBalances[0]
+	util.Info(fmt.Sprintf("%s balance: %v", currency, position))
+	return &position
 }
 
 func CancelOrder(order_id int) *Order {
 	util.Info(fmt.Sprintf("CancelOrder called with order_id: %v", order_id))
 	var canceledOrder Order
-	endpoint := "/v1/order/cancel"
-	payload := map[string]interface{}{
-		"order_id": order_id,
-	}
+	payload, _ := json.Marshal(CancelOrderRequest{
+		Request: "/v1/order/cancel",
+		Nonce:   util.GenerateNonceString(),
+		OrderID: order_id,
+	})
 	// Pass the payload to the function
-	err := PostPrivateEndpoint(endpoint, payload, &canceledOrder)
-
+	err := PostPrivateEndpoint(payload, &canceledOrder)
 	if err != nil {
 		log.Fatalf("Error canceling order: %v", err)
 		return nil
