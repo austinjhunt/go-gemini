@@ -158,69 +158,6 @@ func GetOrderStatus(order_id int) *Order {
 	return &orderStatus
 }
 
-func StopLimitBuy(symbol string, dollarAmount float64, stopPrice float64, limitPrice float64) *Order {
-	/**
-	  StopLimitBuy places a stop-limit buy order.
-
-	  Parameters:
-	  - symbol (string): The trading pair symbol (e.g., "BTCUSD").
-	  - dollarAmount (float64): The amount in USD to spend on the buy order.
-	  - stopPrice (float64): The price that triggers the order to be placed.
-	  - limitPrice (float64): The price at which the order will be executed.
-
-	  Returns:
-	  - *Order: A pointer to the created order object.
-
-	  Behavior:
-	  - Validates that stopPrice is less than limitPrice.
-	  - Calculates the amount to buy based on the dollarAmount and limitPrice.
-	  - Uses the NewOrder function to place the stop-limit buy order.
-
-	  Notes:
-	  - The stopPrice must be less than the limitPrice for buy orders.
-	  - Logs an error and exits if any validation fails or if fetching the current price fails.
-	*/
-	util.Info(fmt.Sprintf("StopLimitBuy called with symbol: %s, dollarAmount: %f, stopPrice: %f, limitPrice: %f", symbol, dollarAmount, stopPrice, limitPrice))
-
-	// Fetch the current coin price
-	currentPrice := public.GetCurrentCoinPriceUSD(symbol)
-	if currentPrice < 0 {
-		log.Fatalf("Failed to fetch current price for symbol: %s", symbol)
-		return nil
-	}
-
-	// Validate the stop price and limit price
-	if stopPrice >= limitPrice {
-		log.Fatalf("Invalid stop and limit prices: stopPrice (%f) must be less than limitPrice (%f)", stopPrice, limitPrice)
-		return nil
-	}
-
-	// Calculate the amount to buy
-	amount := dollarAmount / limitPrice
-
-	var newOrder Order
-
-	payload, _ := json.Marshal(StopLimitOrderRequest{
-		Amount:    strconv.FormatFloat(amount, 'f', 8, 64),
-		Price:     strconv.FormatFloat(limitPrice, 'f', 2, 64),
-		Side:      "buy",
-		StopPrice: strconv.FormatFloat(stopPrice, 'f', 2, 64),
-		Symbol:    symbol,
-		Type:      "exchange stop limit",
-		Request:   "/v1/order/new",
-		Nonce:     util.GenerateNonceString(),
-	})
-
-	// Pass the payload to the function
-	err := PostPrivateEndpoint(payload, &newOrder)
-
-	if err != nil {
-		log.Fatalf("Error creating new order: %v", err)
-		return nil
-	}
-	return &newOrder
-}
-
 func StopLimitSell(symbol string, amount float64, stopPrice float64, limitPrice float64) *Order {
 	/**
 	  StopLimitSell places a stop-limit sell order.
@@ -264,6 +201,67 @@ func StopLimitSell(symbol string, amount float64, stopPrice float64, limitPrice 
 		Amount:    strconv.FormatFloat(amount, 'f', 8, 64),
 		Price:     strconv.FormatFloat(limitPrice, 'f', 2, 64),
 		Side:      "sell",
+		StopPrice: strconv.FormatFloat(stopPrice, 'f', 2, 64),
+		Symbol:    symbol,
+		Type:      "exchange stop limit",
+		Request:   "/v1/order/new",
+		Nonce:     util.GenerateNonceString(),
+	})
+
+	// Pass the payload to the function
+	err := PostPrivateEndpoint(payload, &newOrder)
+
+	if err != nil {
+		log.Fatalf("Error creating new order: %v", err)
+		return nil
+	}
+	return &newOrder
+
+}
+
+func StopLimitBuy(symbol string, amount float64, stopPrice float64, limitPrice float64) *Order {
+	/**
+	  StopLimitBuyu places a stop-limit buy order.
+
+	  Parameters:
+	  - symbol (string): The trading pair symbol (e.g., "BTCUSD").
+	  - amount (float64): The amount of the asset to sell.
+	  - stopPrice (float64): The price that triggers the order to be placed.
+	  - limitPrice (float64): The price at which the order will be executed.
+
+	  Returns:
+	  - *Order: A pointer to the created order object.
+
+	  Behavior:
+	  - Validates that stopPrice is greater than limitPrice.
+	  - Uses the NewOrder function to place the stop-limit sell order.
+
+	  Notes:
+	  - The stopPrice must be greater than the limitPrice for sell orders.
+	  - Logs an error and exits if any validation fails or if fetching the current price fails.
+	*/
+
+	util.Info(fmt.Sprintf("StopLimitSell called with symbol: %s, amount: %f, stopPrice: %f, limitPrice: %f", symbol, amount, stopPrice, limitPrice))
+
+	// Fetch the current coin price
+	currentPrice := public.GetCurrentCoinPriceUSD(symbol)
+	if currentPrice < 0 {
+		log.Fatalf("Failed to fetch current price for symbol: %s", symbol)
+		return nil
+	}
+
+	// Validate the stop price and limit price
+	if stopPrice >= limitPrice {
+		log.Fatalf("Invalid stop and limit prices: stopPrice (%f) must be less than limitPrice (%f)", stopPrice, limitPrice)
+		return nil
+	}
+
+	var newOrder Order
+
+	payload, _ := json.Marshal(StopLimitOrderRequest{
+		Amount:    strconv.FormatFloat(amount, 'f', 8, 64),
+		Price:     strconv.FormatFloat(limitPrice, 'f', 2, 64),
+		Side:      "buy",
 		StopPrice: strconv.FormatFloat(stopPrice, 'f', 2, 64),
 		Symbol:    symbol,
 		Type:      "exchange stop limit",

@@ -370,6 +370,7 @@ func GetCurrentCoinPriceUSD(symbol string) float64 {
 }
 
 func ConvertUSDToCryptoAmount(dollarAmount float64, symbol string) float64 {
+	util.Info(fmt.Sprintf("Converting %f USD to %s", dollarAmount, symbol))
 	ticker := GetTickerV2(symbol)
 	if ticker == nil {
 		log.Fatalf("Ticker data for %s not found", symbol)
@@ -383,6 +384,6 @@ func ConvertUSDToCryptoAmount(dollarAmount float64, symbol string) float64 {
 	}
 
 	cryptoAmount := dollarAmount / askPrice
-
+	util.Info(fmt.Sprintf("%f USD = %f %s", dollarAmount, cryptoAmount, symbol))
 	return cryptoAmount
 }
