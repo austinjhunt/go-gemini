@@ -9,7 +9,14 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
 )
+
+func GenerateUUID() string {
+	id := uuid.New()
+	return id.String()
+}
 
 func GenerateNonceString() string {
 	return strconv.FormatInt(time.Now().UTC().Unix(), 10)
