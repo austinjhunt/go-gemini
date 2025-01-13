@@ -2,7 +2,6 @@ package private
 
 import (
 	"fmt"
-	"log"
 	"strconv"
 	"testing"
 
@@ -11,25 +10,24 @@ import (
 )
 
 func TestGetClosedOrdersHistory(t *testing.T) {
-	log.Println("Getting closed orders history")
+	t.Log("Getting closed orders history")
 
 	response := GetClosedOrdersHistory()
 
-	log.Println(response)
+	t.Log(response)
 	if response == nil {
 		t.Errorf("GetOrdersHistory failed")
 	}
 }
 
 func TestGetOrderStatus(t *testing.T) {
-	log.Println("Getting order status")
-
+	t.Log("Getting order status")
 	ordersHistory := GetClosedOrdersHistory()
 	lastOrder := ordersHistory[len(ordersHistory)-1]
 	lastOrderId, _ := strconv.Atoi(lastOrder.OrderID)
-	log.Printf("\nGetting order status for last order in history (id = %v)\n", lastOrderId)
+	t.Logf("\nGetting order status for last order in history (id = %v)\n", lastOrderId)
 	response := GetOrderStatus(lastOrderId)
-	log.Println(response)
+	t.Log(response)
 	if response == nil {
 		t.Errorf("GetOrderStatus failed")
 	}
@@ -40,7 +38,7 @@ func TestStopLimitSell(t *testing.T) {
 
 	// Do not run these to avoid flooding account with trade activity and fees.
 
-	log.Println("Testing StopLimitSell function. This will always fail with \"Invalid price for symbol\" if you do not actually have any of that coin to sell.")
+	t.Log("Testing StopLimitSell function. This will always fail with \"Invalid price for symbol\" if you do not actually have any of that coin to sell.")
 	// point of a stop limit sell order is to minimize loss, ultimately. sell if it starts dropping and limit your losses with a limit price ("sell if dropping but don't sell if it's already dropped too far")
 	// goal: sell N% of my BTCUSD when BTCUSD ask price reaches some very unlikely low number - sell order will still place as long as i provide an amount of coin to sell that i actually own
 	coin := "BTC"
@@ -50,7 +48,7 @@ func TestStopLimitSell(t *testing.T) {
 	// how much I own:
 	availableToSell, _ := strconv.ParseFloat(availableBalance.Available, 32)
 	if availableToSell == 0 {
-		log.Printf("No %s available to sell (might already have an active stop limit sell order)", coin)
+		t.Logf("No %s available to sell (might already have an active stop limit sell order)", coin)
 	}
 	sellRatio := .01 // 1%
 	amountToSell := sellRatio * availableToSell
@@ -64,7 +62,7 @@ func TestStopLimitSell(t *testing.T) {
 	if order == nil {
 		t.Errorf("StopLimitSell failed: order is nil")
 	} else {
-		log.Printf("Order successfully placed: %+v", order)
+		t.Logf("Order successfully placed: %+v", order)
 	}
 
 	// cancel that order
@@ -94,7 +92,7 @@ func TestStopLimitBuy(t *testing.T) {
 	if order == nil {
 		t.Errorf("StopLimitSell failed: order is nil")
 	} else {
-		log.Printf("Order successfully placed: %+v", order)
+		t.Logf("Order successfully placed: %+v", order)
 	}
 
 	// cancel that order
@@ -105,7 +103,7 @@ func TestStopLimitBuy(t *testing.T) {
 }
 
 func TestLimitSell(t *testing.T) {
-	log.Println("Skipping to avoid fee accrual")
+	t.Skip("Skipping to avoid fee accrual")
 	// goal: sell N% of available coin balance when coin price increases X%
 	coin := "BTC"
 	tradingPair := "btcusd"
@@ -113,7 +111,7 @@ func TestLimitSell(t *testing.T) {
 	// how much I own:
 	availableToSell, _ := strconv.ParseFloat(availableBalance.Available, 32)
 	if availableToSell == 0 {
-		log.Printf("No %s available to sell (might already have an active stop limit sell order)", coin)
+		t.Logf("No %s available to sell (might already have an active stop limit sell order)", coin)
 	}
 	sellRatio := .01 // 1%
 	amountToSell := sellRatio * availableToSell
@@ -126,7 +124,7 @@ func TestLimitSell(t *testing.T) {
 	if order == nil {
 		t.Errorf("LimitSell failed: order is nil")
 	} else {
-		log.Printf("Order successfully placed: %+v", order)
+		t.Logf("Order successfully placed: %+v", order)
 	}
 
 	// cancel that order
@@ -145,7 +143,7 @@ func TestLimitBuy(t *testing.T) {
 	balance := GetAvailableCurrencyBalance("USD")
 	availableUSDbalance, _ := strconv.ParseFloat(balance.Available, 32)
 	if availableUSDbalance < buyUSDAmount {
-		log.Printf("USD balance (%f) too low to buy %f worth of %s", availableUSDbalance, buyUSDAmount, coin)
+		t.Logf("USD balance (%f) too low to buy %f worth of %s", availableUSDbalance, buyUSDAmount, coin)
 	}
 	coinAmountToBuy := public.ConvertUSDToCryptoAmount(buyUSDAmount, tradingPair)
 
@@ -157,7 +155,7 @@ func TestLimitBuy(t *testing.T) {
 	if order == nil {
 		t.Errorf("LimitBuy failed: order is nil")
 	} else {
-		log.Printf("Order successfully placed: %+v", order)
+		t.Logf("Order successfully placed: %+v", order)
 	}
 
 	// cancel that order
