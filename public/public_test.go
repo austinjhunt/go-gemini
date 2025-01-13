@@ -53,19 +53,24 @@ func TestGetNetwork(t *testing.T) {
 // TestGetTicker tests the GetTicker function
 func TestGetTicker(t *testing.T) {
 	response := GetTicker("btcusd")
-	log.Println(response)
-	if len(response) == 0 {
+  if response ==  nil {
 		t.Errorf("GetTicker failed")
+    return 
 	}
+  ticker := *response 
+	log.Println(ticker)
 }
 
 // TestGetTickerV2 tests the GetTickerV2 function
 func TestGetTickerV2(t *testing.T) {
 	response := GetTickerV2("btcusd")
-	log.Println(response)
-	if len(response) == 0 {
+  if response == nil  {
 		t.Errorf("GetTickerV2 failed")
+    return 
 	}
+  ticker := *response 
+	log.Println(ticker)
+	 
 }
 
 // TestGetCandles tests the GetCandles function
@@ -125,6 +130,14 @@ func TestGetFundingAmount(t *testing.T){
   log.Println(response)
   if len(response) == 0 {
     t.Errorf("GetFundingAmount failed")
+  }
+}
+
+func TestGetCurrentCoinPriceUSD(t *testing.T){
+  response := GetCurrentCoinPriceUSD("btcusd")
+  log.Println(response) 
+  if response == -1 {
+    t.Errorf("GetCurrentCoinPriceUSD failed")
   }
 }
 
@@ -203,3 +216,4 @@ func TestDownloadFundingAmountReport(t *testing.T) {
 
 	t.Log("TestDownloadFundingAmountReport passed.")
 }
+ 
