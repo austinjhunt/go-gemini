@@ -12,9 +12,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
-	"time"
 
-	"github.com/austinjhunt/go-gemini/public"
 	"github.com/austinjhunt/go-gemini/util"
 	"github.com/joho/godotenv"
 )
@@ -160,34 +158,27 @@ func GetOrderStatus(order_id int) *Order {
 
 func StopLimitSell(symbol string, amount float64, stopPrice float64, limitPrice float64) *Order {
 	/**
-	  StopLimitSell places a stop-limit sell order.
+		  StopLimitSell places a stop-limit sell order.
 
-	  Parameters:
-	  - symbol (string): The trading pair symbol (e.g., "BTCUSD").
-	  - amount (float64): The amount of the asset to sell.
-	  - stopPrice (float64): The price that triggers the order to be placed.
-	  - limitPrice (float64): The price at which the order will be executed.
+		  Parameters:
+		  - symbol (string): The trading pair symbol (e.g., "BTCUSD").
+		  - amount (float64): The amount of the asset to sell.
+		  - stopPrice (float64): The price that triggers the order to be placed.
+		  - limitPrice (float64): The price at which the order will be executed.
 
-	  Returns:
-	  - *Order: A pointer to the created order object.
+		  Returns:
+		  - *Order: A pointer to the created order object.
 
-	  Behavior:
-	  - Validates that stopPrice is greater than limitPrice.
-	  - Uses the NewOrder function to place the stop-limit sell order.
+		  Behavior:
+		  - Validates that stopPrice is greater than limitPrice.
+	        - Places stop limit sell order
 
-	  Notes:
-	  - The stopPrice must be greater than the limitPrice for sell orders.
-	  - Logs an error and exits if any validation fails or if fetching the current price fails.
+		  Notes:
+		  - The stopPrice must be greater than the limitPrice for sell orders.
+		  - Logs an error and exits if any validation fails or if fetching the current price fails.
 	*/
 
 	util.Info(fmt.Sprintf("StopLimitSell called with symbol: %s, amount: %f, stopPrice: %f, limitPrice: %f", symbol, amount, stopPrice, limitPrice))
-
-	// Fetch the current coin price
-	currentPrice := public.GetCurrentCoinPriceUSD(symbol)
-	if currentPrice < 0 {
-		log.Fatalf("Failed to fetch current price for symbol: %s", symbol)
-		return nil
-	}
 
 	// Validate the stop price and limit price
 	if stopPrice <= limitPrice {
@@ -234,21 +225,14 @@ func StopLimitBuy(symbol string, amount float64, stopPrice float64, limitPrice f
 
 	  Behavior:
 	  - Validates that stopPrice is greater than limitPrice.
-	  - Uses the NewOrder function to place the stop-limit sell order.
+	  - Places the stop-limit buy order.
 
 	  Notes:
-	  - The stopPrice must be greater than the limitPrice for sell orders.
+	  - The stopPrice must be lower than the limitPrice for buy orders.
 	  - Logs an error and exits if any validation fails or if fetching the current price fails.
 	*/
 
 	util.Info(fmt.Sprintf("StopLimitSell called with symbol: %s, amount: %f, stopPrice: %f, limitPrice: %f", symbol, amount, stopPrice, limitPrice))
-
-	// Fetch the current coin price
-	currentPrice := public.GetCurrentCoinPriceUSD(symbol)
-	if currentPrice < 0 {
-		log.Fatalf("Failed to fetch current price for symbol: %s", symbol)
-		return nil
-	}
 
 	// Validate the stop price and limit price
 	if stopPrice >= limitPrice {
@@ -339,41 +323,84 @@ func CancelOrder(order_id int) *Order {
 	return &canceledOrder
 }
 
-func TradingBot(symbol string, tradingAmount float64) {
-	util.Info(fmt.Sprintf("TradingBot called with symbol: %s, tradingAmount: %f", symbol, tradingAmount))
+func LimitBuy(symbol string, amount float64, limitPrice float64) *Order {
+	/**
+	  LimitBuy places an exchange limit buy order.
 
-	for {
-		// Fetch the current price
-		currentPrice := public.GetCurrentCoinPriceUSD(symbol)
-		if currentPrice == -1 {
-			log.Printf("Failed to fetch current price for symbol: %s. Retrying...", symbol)
-			continue
-		}
+	  Parameters:
+	  - symbol (string): The trading pair symbol (e.g., "BTCUSD").
+	  - amount (float64): The amount of the asset to sell.
+	  - limitPrice (float64): The price at which the order will be executed.
 
-		// Define the price range for trading
-		buyStopPrice := 101.0
-		buyLimitPrice := 101.5
-		sellStopPrice := 109.0
-		sellLimitPrice := 108.5
+	  Returns:
+	  - *Order: A pointer to the created order object.
 
-		if currentPrice <= buyStopPrice {
-			// Place a stop-limit buy order
-			log.Printf("Placing a buy order at stopPrice: %f, limitPrice: %f", buyStopPrice, buyLimitPrice)
-			order := StopLimitBuy(symbol, tradingAmount, buyStopPrice, buyLimitPrice)
-			if order != nil {
-				log.Printf("Buy order placed: %+v", order)
-			}
-		} else if currentPrice >= sellStopPrice {
-			// Calculate the amount to sell (assuming full balance)
-			balance := tradingAmount / currentPrice // Simplified for example
-			log.Printf("Placing a sell order at stopPrice: %f, limitPrice: %f", sellStopPrice, sellLimitPrice)
-			order := StopLimitSell(symbol, balance, sellStopPrice, sellLimitPrice)
-			if order != nil {
-				log.Printf("Sell order placed: %+v", order)
-			}
-		}
+	  Notes:
+	  - Logs an error and exits if any validation fails or if fetching the current price fails.
+	*/
 
-		// Sleep for a while before checking again (e.g., to avoid hitting API rate limits)
-		time.Sleep(10 * time.Second)
+	util.Info(fmt.Sprintf("StopLimitSell called with symbol: %s, amount: %f, limitPrice: %f", symbol, amount, limitPrice))
+
+	var newOrder Order
+
+	payload, _ := json.Marshal(LimitOrderRequest{
+		ClientOrderID: util.GenerateUUID(),
+		Symbol:        symbol,
+		Amount:        strconv.FormatFloat(amount, 'f', 8, 64),
+		Price:         strconv.FormatFloat(limitPrice, 'f', 2, 64),
+		Side:          "buy",
+		Type:          "exchange limit",
+		Request:       "/v1/order/new",
+		Nonce:         util.GenerateNonceString(),
+	})
+
+	// Pass the payload to the function
+	err := PostPrivateEndpoint(payload, &newOrder)
+
+	if err != nil {
+		log.Fatalf("Error creating new order: %v", err)
+		return nil
 	}
+	return &newOrder
+}
+
+func LimitSell(symbol string, amount float64, limitPrice float64) *Order {
+	/**
+	  LimitSell places an exchange limit sell order.
+
+	  Parameters:
+	  - symbol (string): The trading pair symbol (e.g., "BTCUSD").
+	  - amount (float64): The amount of the asset to sell.
+	  - limitPrice (float64): The price at which the order will be executed.
+
+	  Returns:
+	  - *Order: A pointer to the created order object.
+
+	  Notes:
+	  - Logs an error and exits if any validation fails or if fetching the current price fails.
+	*/
+
+	util.Info(fmt.Sprintf("StopLimitSell called with symbol: %s, amount: %f, limitPrice: %f", symbol, amount, limitPrice))
+
+	var newOrder Order
+
+	payload, _ := json.Marshal(LimitOrderRequest{
+		ClientOrderID: util.GenerateUUID(),
+		Symbol:        symbol,
+		Amount:        strconv.FormatFloat(amount, 'f', 8, 64),
+		Price:         strconv.FormatFloat(limitPrice, 'f', 2, 64),
+		Side:          "sell",
+		Type:          "exchange limit",
+		Request:       "/v1/order/new",
+		Nonce:         util.GenerateNonceString(),
+	})
+
+	// Pass the payload to the function
+	err := PostPrivateEndpoint(payload, &newOrder)
+
+	if err != nil {
+		log.Fatalf("Error creating new order: %v", err)
+		return nil
+	}
+	return &newOrder
 }
