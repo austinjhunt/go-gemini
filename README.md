@@ -1,6 +1,6 @@
 # Go Gemini
 
-Golang implementation of a cryptocurrency trading bot specifically for the Gemini exchange.
+Golang implementation of a Gemini CLI tool that uses the public Gemini API to pull financial information about cryptocurrency.
 
 ## Usage
 

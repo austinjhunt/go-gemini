@@ -30,6 +30,8 @@ func GetPublicEndpoint(endpoint string, target interface{}) error {
 
 	url := util.GetBaseAPIUrl() + endpoint
 
+	util.Info(fmt.Sprintf("Fetching public endpoint: %s", url))
+
 	method := "GET"
 
 	client := &http.Client{}

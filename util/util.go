@@ -9,9 +9,16 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
+	"fmt"
 	"github.com/google/uuid"
 )
+
+func PrintMap(data map[string]interface{}) {
+    fmt.Println("Symbol Details:")
+    for k, v := range data {
+        fmt.Printf("  %-20s: %v\n", k, v)
+    }
+} 
 
 func GenerateUUID() string {
 	id := uuid.New()
